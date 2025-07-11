@@ -1,69 +1,83 @@
-# IRS Scraper Backend — Version 2
+# IRS Scraper — Version 2 using Apollo.io's API
 
-An automated Python script that uses the Apollo API to programmatically retrieve contact information for IRS-credentialed tax professionals. The script sends structured API requests, parses JSON responses, and exports cleaned contact data (first name, last name, email, phone) into a CSV file for easy access and analysis.
-
----
-
-## What Version 2 Is Designed To Do
-
-Version 2 is designed to programmatically retrieve IRS-related contact information via the Apollo API. While the code successfully queries the API and processes responses, available data is limited due to API access restrictions encountered during development.
-
-- Sends POST requests to the Apollo API contacts search endpoint with pagination support.
-- Extracts key contact fields: First Name, Last Name, Email, and Phone Number.
-- Saves the retrieved contact information into `contacts.csv`.
-- Opens the CSV file automatically upon completion for user convenience.
+An interactive Python web app that uses the Apollo API to programmatically retrieve contact information for IRS-credentialed tax professionals. This tool allows users to enter search filters (such as city, state, job title, and company domain), fetch results using the Apollo API, and export the cleaned contact data into a CSV file.
 
 ---
 
-## Development Journey and Challenges
+## What Version 2 Does
 
-Initially, I built a Selenium-based web scraper to collect data directly from the IRS Registered Tax Return Preparers Online (RPO) directory. This allowed dynamic interaction with the website’s search filters and pagination.
-
-However, scraping emails and phone numbers separately from the site proved technically challenging due to the dispersed nature of contact details and complex page navigation.
-
-To address these challenges, I pivoted to using the Apollo API to retrieve structured contact data programmatically. While this simplified data handling, I encountered API access limitations and restrictions that constrained the volume of retrievable data despite extensive testing with varying page numbers and filters.
-
----
-
-## Technical Debugging and Hurdles
-
-During development, I implemented status code checks to verify successful API responses and added handling for cases where no contacts were returned, ensuring graceful failure and clear messaging.
-
-I experimented with refining query parameters by both narrowing and broadening search categories in an effort to retrieve more comprehensive data. Despite these efforts, the API consistently returned limited or no contact data due to access restrictions.
-
-Recognizing these limitations, I am revisiting the Selenium-based scraper, which has greater potential for accessing foundational contact information directly from the IRS site. Although this API-driven approach is a valuable learning experience, I view this project as ongoing and plan to further develop and integrate both methods in the future.
+- Sends POST requests to the Apollo API’s people search endpoint with pagination and filter support.
+- Extracts contact information: First Name, Last Name, Email, Phone, Company, Title, and LinkedIn.
+- Displays results in an interactive UI built with Streamlit.
+- Allows users to download search results as a CSV file.
 
 ---
 
-## Next Steps and Future Work
+## Development Journey
 
-To continue providing valuable data to users, I plan to revisit and refine the Selenium scraper to reliably extract first and last names from the RPO directory. This dataset will serve as a foundation for users to manually supplement missing emails and phone numbers.
+The project began with a Selenium-based IRS RPO directory scraper. However, due to the complexity of extracting emails and phone numbers from the site, the project pivoted to the Apollo API.
 
-Additionally, I intend to develop a lightweight user interface using Flask for the backend and a simple frontend framework. This UI will allow users to interactively search, view, and enrich scraped data in a user-friendly environment.
+Using the Apollo API allowed structured data access and cleaner logic, though it introduced limitations in the volume and types of accessible data due to API plan restrictions. To make the experience user-friendly and accessible, the project was transitioned into a web app with a clean UI using Streamlit.
 
-## Future Enhancements
+---
 
-- I plan to explore enhancing API pagination handling to retrieve larger datasets.
-- Future work could include adding robust error handling and retry logic for API rate limits and failures.
-- I aim to integrate the Selenium scraper to provide foundational name data where API access is limited.
-- The development of a Flask backend connected to a frontend UI (potentially React with JSX or vanilla JS) is a possibility to enable interactive user data exploration and manual augmentation of contact information.
-- Expanding data export formats (Excel, JSON) and filtering options may also be added.
+## Technical Features
+
+- Modular code split between a backend (`main.py`) and a UI (`ui.py`).
+- API key management:
+  - Users can manually enter their Apollo API key once through the UI.
+  - The key is stored securely in `st.session_state` for the duration of the session.
+- Error handling for invalid keys or failed requests.
+- Search filters include:
+  - City and State
+  - Job Titles (comma-separated)
+  - Company Domains (comma-separated)
+  - Number of Pages and People per Page
+
+---
+
+## Deployment Plan
+
+This project will be deployed publicly using **Streamlit Community Cloud**, making it accessible to any user with an Apollo API key. Users will:
+
+1. Visit the hosted app link.
+2. Enter their API key directly into the interface.
+3. Enter search filters.
+4. View, filter, and download results.
+
+This approach removes the need for manual setup or local execution, enabling broader and easier access.
 
 ---
 
 ## Tech Stack
 
-- Language: Python 3.11  
-- Libraries: `requests`, `pandas`  
-- API: Apollo Contacts Search API  
-- (Planned) Backend UI: Flask  
-- (Planned) Frontend UI: TBD (could be React with JSX, vanilla JavaScript, or other frameworks)
+- **Language**: Python 3.11  
+- **Libraries**: `requests`, `pandas`, `streamlit`  
+- **API**: Apollo People Search API  
+- **UI**: Streamlit Web App  
 
 ---
 
-## Getting Started
+## Limitations
 
-To set up and run the project:
+- Apollo API access is subject to your API plan (must be paid otherwise no data will be retrieved).
+- Some searches may return limited or no results depending on your query filters and API rate limits.
+
+---
+
+## Future Plans
+
+- Have an option for the user to interact with a "free scraper" (one that doesn't need a paid API key), I can use my Selenium version for that
+- Add caching to reduce repeated API calls.
+- Support for saving session history.
+- Basic data visualizations (location heatmap, job title distribution).
+- Pagination controls in UI to load results dynamically.
+
+---
+
+## Getting Started Locally
+
+To run the project on your local machine:
 
 ```bash
 # 1. Clone the repository
@@ -71,11 +85,7 @@ git clone https://github.com/yourusername/IRS-Scraper-Version-2.git
 cd IRS-Scraper-Version-2
 
 # 2. Install dependencies
-pip install requests pandas
+pip install -r requirements.txt
 
-# 3. Insert your Apollo API key
-# Open the script and replace the line with your actual API key:
-# API_KEY = "YOUR_ACTUAL_API_KEY_HERE"
-
-# 4. Run the script
-python main.py
+# 3. Run the app
+streamlit run ui.py
