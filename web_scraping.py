@@ -1,11 +1,9 @@
-import streamlit as st
+import time
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-import pandas as pd
-import time
 
 def split_name(name):
     if "," in name:
@@ -16,10 +14,10 @@ def split_name(name):
         words = name.split()
         first = words[0] if len(words) > 0 else ""
         last = words[1] if len(words) > 1 else ""
-    return pd.Series([first, last])
+    return first, last
 
 def scrape_irs_data(zip_code, distance, num_pages, include_options):
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome()  # make sure chromedriver is installed and on PATH
     driver.get("https://irs.treasury.gov/rpo/rpo.jsf")
 
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "form:country")))
@@ -35,12 +33,12 @@ def scrape_irs_data(zip_code, distance, num_pages, include_options):
     time.sleep(2)
 
     checkbox_options = {
-        "form:attorney": include_options["Attorney Credentials"],
-        "form:accountant": include_options["CPA Credentials"],
-        "form:agent": include_options["Enrolled Agent Credentials"],
-        "form:actuary": include_options["Enrolled Actuary Credentials"],
-        "form:retirement": include_options["Retirement Plan Agent Credentials"],
-        "form:filingSeasonProgram": include_options["Annual Filing Season Credentials"]
+        "form:attorney": include_options.get("Attorney Credentials", False),
+        "form:accountant": include_options.get("CPA Credentials", False),
+        "form:agent": include_options.get("Enrolled Agent Credentials", False),
+        "form:actuary": include_options.get("Enrolled Actuary Credentials", False),
+        "form:retirement": include_options.get("Retirement Plan Agent Credentials", False),
+        "form:filingSeasonProgram": include_options.get("Annual Filing Season Credentials", False),
     }
 
     for box_id, include in checkbox_options.items():
@@ -77,7 +75,7 @@ def scrape_irs_data(zip_code, distance, num_pages, include_options):
 
     df_full = pd.DataFrame(data_list, columns=["Name", "Credential", "Location", "Distance"])
     df_contacts = pd.DataFrame()
-    df_contacts[["First Name", "Last Name"]] = df_full["Name"].apply(split_name)
+    df_contacts[["First Name", "Last Name"]] = df_full["Name"].apply(lambda n: pd.Series(split_name(n)))
     df_contacts["Phone"] = ""
     df_contacts["Email"] = ""
     df_contacts["Other Info"] = df_full.apply(
@@ -90,42 +88,37 @@ def scrape_irs_data(zip_code, distance, num_pages, include_options):
     driver.quit()
     return output_file
 
-def run_web_scraper_mode():
-    st.header("IRS Web Scraper")
-    st.warning(
-        "⚠ **Disclaimer:** This method does NOT return phone numbers or emails. "
-        "Only names and basic details will be provided. "
-        "You will need to manually find and reformat contact info."
-    )
+def main():
+    print("Starting IRS Web Scraper (local only)")
+    zip_code = input("Enter ZIP code: ").strip()
+    distance = input("Enter distance in miles (5, 10, 25, 50, 100, 250): ").strip()
+    while distance not in ["5", "10", "25", "50", "100", "250"]:
+        print("Invalid distance. Try again.")
+        distance = input("Enter distance in miles (5, 10, 25, 50, 100, 250): ").strip()
+    distance = int(distance)
 
-    with st.form("web_scraper_form"):
-        zip_code = st.text_input("ZIP Code")
-        num_pages = st.number_input("Number of pages to navigate", min_value=1, max_value=100, value=1)
-        distance = st.selectbox("Distance (miles)", [5, 10, 25, 50, 100, 250])
+    num_pages = input("Enter number of pages to scrape (e.g., 1): ").strip()
+    while not num_pages.isdigit() or int(num_pages) < 1:
+        print("Please enter a positive integer for pages.")
+        num_pages = input("Enter number of pages to scrape (e.g., 1): ").strip()
+    num_pages = int(num_pages)
 
-        st.markdown("**Select credentials to include:**")
-        include_options = {
-            "Attorney Credentials": st.checkbox("Attorney Credentials"),
-            "CPA Credentials": st.checkbox("CPA Credentials"),
-            "Enrolled Agent Credentials": st.checkbox("Enrolled Agent Credentials"),
-            "Enrolled Actuary Credentials": st.checkbox("Enrolled Actuary Credentials"),
-            "Retirement Plan Agent Credentials": st.checkbox("Retirement Plan Agent Credentials"),
-            "Annual Filing Season Credentials": st.checkbox("Annual Filing Season Credentials"),
-        }
+    print("Include credentials (yes/no):")
+    include_options = {}
+    for credential in [
+        "Attorney Credentials",
+        "CPA Credentials",
+        "Enrolled Agent Credentials",
+        "Enrolled Actuary Credentials",
+        "Retirement Plan Agent Credentials",
+        "Annual Filing Season Credentials"
+    ]:
+        resp = input(f"Include {credential}? (yes/no): ").strip().lower()
+        include_options[credential] = resp == "yes"
 
-        submit_web = st.form_submit_button("Run Web Scraper")
+    print("Scraping IRS data... this may take a few minutes.")
+    output_file = scrape_irs_data(zip_code, distance, num_pages, include_options)
+    print(f"Scraping complete. Data saved to {output_file}")
 
-    if submit_web:
-        with st.spinner("Scraping IRS data... This may take some time."):
-            try:
-                output_file = scrape_irs_data(zip_code, distance, num_pages, include_options)
-                st.success("Scraping complete.")
-                with open(output_file, "rb") as f:
-                    st.download_button(
-                        "Download CSV",
-                        f,
-                        file_name="irs_contacts.csv",
-                        mime="text/csv"
-                    )
-            except Exception as e:
-                st.error(f"Error during web scraping: {e}")
+if __name__ == "__main__":
+    main()
