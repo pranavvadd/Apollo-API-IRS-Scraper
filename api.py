@@ -3,14 +3,16 @@ import datetime as dt
 import pandas as pd
 from api_search import search_people, clean_people_data  # your backend API functions
 
+# Run the Streamlit app in API mode with a form for user input
 def run_api_mode():
     st.header("Apollo API Search")
 
-    # --- API Key Handling ---
+    # API Key Input
     if "api_key" not in st.session_state:
         key_from_secrets = st.secrets.get("api_key", "")
         st.session_state.api_key = key_from_secrets or ""
 
+    # Input for API Key
     API_KEY = st.text_input(
         "Apollo API Key",
         type="password",
@@ -19,11 +21,12 @@ def run_api_mode():
     )
     st.session_state.api_key = API_KEY
 
+    # Check if API Key is provided
     if not API_KEY:
         st.warning("Please enter your API key to continue.")
         return
 
-    # --- Search Form ---
+    # Search Form
     with st.form("search_form"):
         st.subheader("Search Parameters")
         col1, col2 = st.columns(2)
@@ -38,6 +41,7 @@ def run_api_mode():
 
         submit = st.form_submit_button("Search")
 
+    # Process the form submission and putting together the search parameters in a list
     if submit:
         person_locations = []
         if city and state:
@@ -47,9 +51,11 @@ def run_api_mode():
         elif state:
             person_locations = [state]
 
+        # Split and clean job titles and domains inputs
         jobs = [j.strip() for j in jobs_input.split(",") if j.strip()]
         domains = [d.strip() for d in domains_input.split(",") if d.strip()]
 
+        # Validate inputs and call the search function
         with st.spinner("Searching..."):
             try:
                 all_people = search_people(
@@ -64,14 +70,16 @@ def run_api_mode():
                 st.error(f"Error while fetching data: {e}")
                 return
 
+        # If no people found, show a warning
         if not all_people:
             st.warning("No people found.")
             return
 
+        # Clean and prepare the data for display
         df_full = pd.DataFrame(clean_people_data(all_people))
         st.subheader(f"Found {len(df_full)} people")
 
-        # 1. Show preview table with all columns (full details)
+        # Show preview table with all columns (full details)
         max_preview = 200
         st.markdown("### Preview (Full Details)")
         if len(df_full) > max_preview:
@@ -80,13 +88,13 @@ def run_api_mode():
         else:
             st.dataframe(df_full)
 
-        # 2. Show simplified table for manual review (First Name, Last Name, Email, Phone)
+        # Show simplified table for manual review (First Name, Last Name, Email, Phone)
         st.markdown("### Simplified Table (Readily Uploadable to CRM)")
         simplified_cols = ["First Name", "Last Name", "Email", "Phone"]
         df_simple = df_full[simplified_cols]
         st.dataframe(df_simple)
 
-        # 3. Download button for simplified CSV only (no extra columns)
+        # Download button for simplified CSV only (no extra columns)
         csv_simple = df_simple.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="Download Simplified CSV",
